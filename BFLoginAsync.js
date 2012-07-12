@@ -1,5 +1,6 @@
 var betfair = require('betfair-sports-api');
 var async = require('async');
+var request = require('request');
 
 var myArgs = process.argv.slice(2);
 console.log('myArgs: ', myArgs);
@@ -9,9 +10,15 @@ var password = myArgs[1];
 var events = myArgs[2];
 var session = '';
 
-async.series([ login, getAllMarkets, getMarket, getMarketPrices, logout ], function(err, res) {
+request('http://www.google.com', function (error, response, body) {
+  if (!error && response.statusCode == 200) {
+    console.log(body) // Print the google web page.
+  }
+})
+
+/*async.series([ login, getAllMarkets, getMarket, getMarketPrices, logout ], function(err, res) {
     process.exit(0);
-});
+});*/
 
 function login(callback) {
     console.log('login to Betfair');
