@@ -10,6 +10,12 @@ var password = myArgs[1];
 var events = myArgs[2];
 var session = '';
 
+var throttles = { 
+	getAllMarkets:{times:1000, lastAccess: null},
+	getMarket:{times:1000, lastAccess: null},
+	getMarketPricesCompressed:{times:1000, lastAccess: null}
+};
+
 request('http://odds.bestbetting.com/horse-racing/2012-07-12/newmarket/13-20/betting/', function (error, response, body) {
 	if (!error && response.statusCode == 200) {
 		console.log(body) // Print the google web page.
@@ -39,23 +45,26 @@ function login(callback) {
             console.log('login failed, error is', err);
         else
             console.log('login OK');
-        callback(err,res);
+		//console.log('res ========== ', res);
+        callback(err, res);
     });
 }
 
 function keepAlive(callback) {
-    console.log('send keepAlive');
+    console.log('send keepAlive');cmd
     var invocation = session.keepAlive();
     invocation.execute(function(err, res) {
+	
         if (err)
             console.log('keepAlive failed, error is', err);
         else
             console.log('keepAlive OK');
+			
         callback(err,res);
     });
 }
 
-function getAllMarkets(cb) {
+function getAllMarkets(res, callback) {
 
 	console.log('Get available tennis matches');
 
@@ -72,7 +81,7 @@ function getAllMarkets(cb) {
 			', duration:', res.duration() / 1000);
         
 		if (err) {
-			cb("Error in getAllMarkets", null);
+			callback("Error in getAllMarkets", null);
     	}
 		
 		/*var selectedMarkets = [];
@@ -84,8 +93,9 @@ function getAllMarkets(cb) {
 			//var path = market.menuPath;//.replace(/\\Tennis\\Group A\\/g, '');
 
     	}*/
-
-        cb(null, res.result.marketData);
+		//console.log(res.result.marketData);
+		//console.log(callback);
+        callback(null, res.result.marketData);
     });
 }
 
@@ -93,14 +103,16 @@ function filterMarkets(markets, cb) {
 	var filteredMarkets = [];
 	
 	for ( var index in markets) {
-    	market = market[index];		
-		if (market.marketName != 'To Be Placed' || 
-			market.countryCode == 'GBR' ||
-			market.marketName != 'Reverse FC' ||
-			market.marketName != 'Forecast' ||
-			market.numberOfRunners >= 4 ||
-			market.numberOfRunners <= 20 ||
-			market.turningInPlay != 'Y') {
+	
+    	market = markets[index];
+		
+		if (market.marketName != 'To Be Placed' ||	// Don't get place races.
+			market.countryCode == 'GBR' ||			// Only GBR.
+			market.marketName != 'Reverse FC' ||	// Don't get reverse forcast.
+			market.marketName != 'Forecast' ||		// Don't get forcast.
+			market.numberOfRunners >= 4 ||			// 4 or more runners.
+			market.numberOfRunners <= 20 ||			// but no more than 20.
+			market.turningInPlay != 'Y') {			// Market isn't already in play.
 			
 			filteredMarkets.push(market);
 		}
@@ -112,17 +124,24 @@ function filterMarkets(markets, cb) {
 
 function monitorMarketQueue(markets, cb) {
 	// Loop through markets, spawning other processes.
+	for(var index in markets) {
+		getMarket(markets[index].marketId);
+	}
+	
 	cb(null, "All markets processed");
 }
 
-function getMarket(cb) {
-    console.log('Call getMarket for marketId="%s"', events);
-    var inv = session.getMarket('105268904');
+function getMarket(marketId) {
+
+    //console.log('Call getMarket for marketId="%s"', events);
+	
+    var inv = session.getMarket(marketId);
+	
     inv.execute(function(err, res) {
         console.log('action:', res.action, 'error:', err, 'duration:',
                 res.duration() / 1000);
         if (err) {
-            cb("Error in getMarket", null);
+            console.log("Error in getMarket", err);
         }
         
         console.log("marketId:", res.result.market.marketId);
@@ -135,7 +154,7 @@ function getMarket(cb) {
 			console.log("\tHorse Object:", res.result.market.runners[index]);
 		}
 
-        cb(null, "OK");
+        //cb(null, "OK");
     });
 }
 
@@ -174,17 +193,18 @@ function getMarketPrices(cb) {
                 console.log("\t lay price:%s amount:%s", item.price, item.amount);
             }*/
         }
-        cb(null, "OK");
+        cb(null, 'OK');
     });
 }
 
-function logout(callback) {
+function logout(ok, callback) {
     console.log('logout');
     session.close(function(err, res) {
         if (err)
             console.log('logout failed, error is', err);
         else
             console.log('logout OK');
-        callback(err,res);
+			
+        callback(null,'Finished');
     });
 }
