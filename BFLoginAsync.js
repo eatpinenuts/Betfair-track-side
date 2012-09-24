@@ -10,6 +10,43 @@ var password = myArgs[1];
 var events = myArgs[2];
 var session = '';
 
+var throttleInfo = {
+	getMarket: {delay:12000, lastAccess:null},
+	getMarketPricesCompressed: {delay:1000, lastAccess:null}
+}
+
+function IsAccessable(throttleItem) {
+	if (throttleItem.lastAccess === null){
+		throttleItem.lastAccess = new Date();
+		return true;
+	}
+	var elapsedT = new Date(new Date() - throttleItem.lastAccess);
+	
+	if(elapsedT <= throttleItem.delay){
+		console.log(throttleItem.delay - elapsedT); 
+		return (throttleItem.delay - elapsedT);
+	}
+	
+	throttleItem.lastAccess = new Date();
+	return true;
+}
+
+var i = 0;
+(function throttleCall(functionName){
+	var timeOut = IsAccessable(throttleInfo[functionName]);
+	var time = 0;
+	if(timeOut !== true) time = timeOut;
+	setTimeout(function() {
+		if(timeOut === true){
+			console.log('Gotmarket=',i);
+			i++;
+		}
+		if(i < 100){	
+			throttleCall(functionName);
+		}
+    }, time);
+})('getMarket');
+
 request('http://odds.bestbetting.com/horse-racing/2012-07-12/newmarket/13-20/betting/', function (error, response, body) {
 		if (!error && response.statusCode == 200) {
 			console.log(body) // Print the google web page.
@@ -30,51 +67,9 @@ async.waterfall(
 	}
 );
 
-function AddThrottlingToSession() {
-
-    var session = function(){
-		this.getAllMarkets = function(hello) {
-			return value;
-		}
-	}
-	
-	function Throttle (delay) {
-		this.delay = delay; // in milliseconds.
-		this.lastAccess = null; // datatime of last access.
-	}
-	
-	Throttle.prototype.IsAccessable = function(now) {
-		var elapsedT = new Date(now - this.lastAccess);
-		return (elapsedT < this.delay) ? true : false;
-	};
-	
-	session.prototype.callMethod = function(value, method) {
-		console.log(t);
-			if(this.t === null || this.t.IsAccessible === true)
-			{
-				console.log('IsAccessible');
-				this[method](value);
-			}
-			this.t = new Throttle(10000);
-		}
-	}
-
-	session.prototype.throttled = {
-		getAllMarkets:this.callMethod(value, 'getAllMarkets')
-	};
-	
-	var loop = setInterval(function () {
-		session.throttled.getAllMarkets('hello');
-		clearInterval(loop);    
-    }, 100);   
-}
-AddThrottlingToSession();
-
 function login(callback) {
     console.log('login to Betfair');
     session = betfair.newSession(username, password);
-	
-	
 	console.log(session);
     session.open(function(err, res) {
         if (err)
@@ -160,6 +155,7 @@ function filterMarkets(markets, cb) {
 function monitorMarketQueue(markets, cb) {
 	// Loop through markets, spawning other processes.
 	for(var index in markets) {
+		
 		//getMarket(markets[index].marketId);
 	}
 	
