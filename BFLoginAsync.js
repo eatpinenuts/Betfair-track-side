@@ -11,7 +11,7 @@ var events = myArgs[2];
 var session = '';
 
 var throttleInfo = {
-	getMarket: {delay:12000, lastAccess:null},
+	getMarket: {delay:12000, lastAccess:null, call: function(value){session.getMarket(value);}},
 	getMarketPricesCompressed: {delay:1000, lastAccess:null}
 }
 
@@ -31,21 +31,28 @@ function IsAccessable(throttleItem) {
 	return true;
 }
 
-var i = 0;
-(function throttleCall(functionName){
-	var timeOut = IsAccessable(throttleInfo[functionName]);
-	var time = 0;
-	if(timeOut !== true) time = timeOut;
-	setTimeout(function() {
-		if(timeOut === true){
-			console.log('Gotmarket=',i);
-			i++;
-		}
-		if(i < 100){	
-			throttleCall(functionName);
-		}
-    }, time);
-})('getMarket');
+
+function throttleCall(functionName, array, callback){
+	var i = 0;
+	return (function call(functionName){
+		var timeOut = IsAccessable(throttleInfo[functionName]);
+		var time = 0;
+		if(timeOut !== true) time = timeOut;
+		setTimeout(function() {
+			if(timeOut === true){
+				console.log('Gotmarket=',i);
+				throttleInfo[functionName].call(array[i]);
+				i++;
+			}
+			if(i > array.length) {
+				callback(); return;	
+			}
+			call(functionName);
+		}, time);
+	})(functionName);
+}
+
+console.log('Finished');
 
 request('http://odds.bestbetting.com/horse-racing/2012-07-12/newmarket/13-20/betting/', function (error, response, body) {
 		if (!error && response.statusCode == 200) {
@@ -144,7 +151,7 @@ function filterMarkets(markets, cb) {
 			market.numberOfRunners <= 20 ||			// but no more than 20.
 			market.turningInPlay != 'Y') {			// Market isn't already in play.
 			
-			filteredMarkets.push(market);
+			filteredMarkets.push(market.marketId);
 		}
 	}
 	
@@ -154,12 +161,13 @@ function filterMarkets(markets, cb) {
 
 function monitorMarketQueue(markets, cb) {
 	// Loop through markets, spawning other processes.
-	for(var index in markets) {
-		
+	//for(var index in markets) {
 		//getMarket(markets[index].marketId);
-	}
-	
-	cb(null, "All markets processed");
+	//}
+	throttleCall('getMarket', markets, function(){
+		console.log('finished2');
+		cb(null, "All markets processed");
+	});
 }
 
 function getMarket(marketId) {
@@ -190,7 +198,7 @@ function getMarket(marketId) {
 }
 
 var marketId = '105268904';
-function getMarketPrices(cb) {
+function getMarketPrices(marketId, cb) {
     console.log('Call getMarketPricesCompressed for marketId="%s"', marketId);
     var inv = session.getMarketPricesCompressed(marketId);
     inv.execute(function(err, res) {
