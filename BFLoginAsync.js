@@ -11,7 +11,7 @@ var events = myArgs[2];
 var session = '';
 
 var throttleInfo = {
-	getMarket: {delay:12000, lastAccess:null, call: function(value){session.getMarket(value);}},
+	getMarket: {delay:12000, lastAccess:null, call: function(value){getMarket(value);}},
 	getMarketPricesCompressed: {delay:1000, lastAccess:null}
 }
 
@@ -88,7 +88,7 @@ function login(callback) {
 }
 
 function keepAlive(callback) {
-    console.log('send keepAlive');cmd
+    console.log('send keepAlive');
     var invocation = session.keepAlive();
     invocation.execute(function(err, res) {
 	
@@ -111,7 +111,7 @@ function getAllMarkets(res, callback) {
     });
 
     inv.execute(function(err, res) {
-		//console.log(res);
+	    //console.log(res);
     	console.log(
 			'action:', res.action, 
 			', error:', err, 
@@ -141,7 +141,7 @@ function filterMarkets(markets, cb) {
 	
 	for ( var index in markets) {
 	
-    	market = markets[index];
+    	var market = markets[index];
 		
 		if (market.marketName != 'To Be Placed' ||	// Don't get place races.
 			market.countryCode == 'GBR' ||			// Only GBR.
